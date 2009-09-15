@@ -31,17 +31,17 @@ class Contact(models.Model):
     A contact is a person known by a user who may or may not themselves
     be a user.
     """
-    
+
     # the user who created the contact
     user = models.ForeignKey(User, related_name="contacts")
-    
+
     name = models.CharField(max_length=100, null=True, blank=True)
     email = models.EmailField()
     added = models.DateField(default=datetime.date.today)
-    
+
     # the user(s) this contact correspond to
     users = models.ManyToManyField(User)
-    
+
     def __unicode__(self):
         return "%s (%s's contact)" % (self.email, self.user)
 
@@ -55,7 +55,7 @@ class FriendshipManager(models.Manager):
         for friendship in self.filter(to_user=user).select_related(depth=1):
             friends.append({"friend": friendship.from_user, "friendship": friendship})
         return friends
-    
+
     def are_friends(self, user1, user2):
         if self.filter(from_user=user1, to_user=user2).count() > 0:
             return True
@@ -76,14 +76,14 @@ class Friendship(models.Model):
     A friendship is a bi-directional association between two users who
     have both agreed to the association.
     """
-    
+
     to_user = models.ForeignKey(User, related_name="friends")
     from_user = models.ForeignKey(User, related_name="_unused_")
     # @@@ relationship types
     added = models.DateField(default=datetime.date.today)
-    
+
     objects = FriendshipManager()
-    
+
     class Meta:
         unique_together = (('to_user', 'from_user'),)
 
@@ -104,17 +104,17 @@ INVITE_STATUS = (
 )
 
 class JoinInvitationManager(models.Manager):
-    
+
     def send_invitation(self, from_user, to_email, message):
         contact, created = Contact.objects.get_or_create(email=to_email, user=from_user)
         salt = sha_constructor(str(random())).hexdigest()[:5]
         confirmation_key = sha_constructor(salt + to_email).hexdigest()
-        
+
         accept_url = u"http://%s%s" % (
             unicode(Site.objects.get_current()),
             reverse("friends_accept_join", args=(confirmation_key,)),
         )
-        
+
         ctx = {
             "SITE_NAME": settings.SITE_NAME,
             "CONTACT_EMAIL": settings.CONTACT_EMAIL,
@@ -122,11 +122,11 @@ class JoinInvitationManager(models.Manager):
             "message": message,
             "accept_url": accept_url,
         }
-        
+
         subject = render_to_string("friends/join_invite_subject.txt", ctx)
         email_message = render_to_string("friends/join_invite_message.txt", ctx)
-        
-        send_mail(subject, email_message, settings.DEFAULT_FROM_EMAIL, [to_email])        
+
+        send_mail(subject, email_message, settings.DEFAULT_FROM_EMAIL, [to_email])
         return self.create(from_user=from_user, contact=contact, message=message, status="2", confirmation_key=confirmation_key)
 
 
@@ -135,16 +135,16 @@ class JoinInvitation(models.Model):
     A join invite is an invitation to join the site from a user to a
     contact who is not known to be a user.
     """
-    
+
     from_user = models.ForeignKey(User, related_name="join_from")
     contact = models.ForeignKey(Contact)
     message = models.TextField()
     sent = models.DateField(default=datetime.date.today)
     status = models.CharField(max_length=1, choices=INVITE_STATUS)
     confirmation_key = models.CharField(max_length=40)
-    
+
     objects = JoinInvitationManager()
-    
+
     def accept(self, new_user):
         # mark invitation accepted
         self.status = "5"
@@ -170,13 +170,13 @@ class FriendshipInvitation(models.Model):
     A frienship invite is an invitation from one user to another to be
     associated as friends.
     """
-    
+
     from_user = models.ForeignKey(User, related_name="invitations_from")
     to_user = models.ForeignKey(User, related_name="invitations_to")
     message = models.TextField()
     sent = models.DateField(default=datetime.date.today)
     status = models.CharField(max_length=1, choices=INVITE_STATUS)
-    
+
     objects = FriendshipInvitationManager()
 
     def accept(self):
@@ -201,7 +201,7 @@ class FriendshipInvitationHistory(models.Model):
     """
     History for friendship invitations
     """
-    
+
     from_user = models.ForeignKey(User, related_name="invitations_from_history")
     to_user = models.ForeignKey(User, related_name="invitations_to_history")
     message = models.TextField()
