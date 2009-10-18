@@ -9,6 +9,7 @@ from django.contrib.sites.models import Site
 from django.utils.hashcompat import sha_constructor
 from django.db.models import signals
 from django.conf import settings
+from django.contrib.sites.models import Site
 
 # favour django-mailer but fall back to django.core.mail
 if "mailer" in settings.INSTALLED_APPS:
@@ -25,6 +26,9 @@ if "emailconfirmation" in settings.INSTALLED_APPS:
     from emailconfirmation.models import EmailAddress
 else:
     EmailAddress = None
+
+if "django.contrib.sites" in settings.INSTALLED_APPS:
+    from django.contrib.sites.models import Site
 
 class Contact(models.Model):
     """
@@ -116,8 +120,8 @@ class JoinInvitationManager(models.Manager):
         )
 
         ctx = {
-            "SITE_NAME": settings.SITE_NAME,
-            "CONTACT_EMAIL": settings.CONTACT_EMAIL,
+            "SITE": Site.objects.get_current().name,
+            "CONTACT_EMAIL": settings.DEFAULT_FROM_EMAIL,
             "user": from_user,
             "message": message,
             "accept_url": accept_url,

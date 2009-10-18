@@ -20,23 +20,25 @@ class UserForm(forms.Form):
         self.user = user
         super(UserForm, self).__init__(*args, **kwargs)
 
-if EmailAddress:
-    class JoinRequestForm(forms.Form):
+class JoinRequestForm(forms.Form):
     
-        email = forms.EmailField(label="Email", required=True, widget=forms.TextInput(attrs={'size':'30'}))
-        message = forms.CharField(label="Message", required=False, widget=forms.Textarea(attrs = {'cols': '30', 'rows': '5'}))
+    email = forms.EmailField(label="Email", required=True, widget=forms.TextInput(attrs={'size':'30'}))
+    message = forms.CharField(label="Message", required=False, widget=forms.Textarea(attrs = {'cols': '30', 'rows': '5'}))
     
-        def clean_email(self):
-            # @@@ this assumes email-confirmation is being used
+    def clean_email(self):
+        if EmailAddress:
             self.existing_users = EmailAddress.objects.get_users_for(self.cleaned_data["email"])
-            if self.existing_users:
-                raise forms.ValidationError(u"Someone with that email address is already here.")
-            return self.cleaned_data["email"]
+        else:
+            self.existing_users = User.objects.filter(email=self.cleaned_data["email"])
+        
+        if self.existing_users:
+            raise forms.ValidationError(u"Someone with that email address is already here.")
+        return self.cleaned_data["email"]
     
-        def save(self, user):
-            join_request = JoinInvitation.objects.send_invitation(user, self.cleaned_data["email"], self.cleaned_data["message"])
-            user.message_set.create(message="Invitation to join sent to %s" % join_request.contact.email)
-            return join_request
+    def save(self, user):
+        join_request = JoinInvitation.objects.send_invitation(user, self.cleaned_data["email"], self.cleaned_data["message"])
+        user.message_set.create(message="Invitation to join sent to %s" % join_request.contact.email)
+        return join_request
     
 class InviteFriendForm(UserForm):
     
