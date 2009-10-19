@@ -168,6 +168,19 @@ class JoinInvitation(models.Model):
 class FriendshipInvitationManager(models.Manager):
     def invitations(self, *args, **kwargs):
         return self.filter(*args, **kwargs).exclude(status__in=["6", "8"])
+    
+    def send_invitation(self, from_user, to_user, message=""):        
+        if self.filter(from_user=from_user, to_user=to_user).exclude(status="3"):
+            # friendshipinvitation has been sent and it hasn't failed, do nothing
+            pass
+        elif self.filter(from_user=to_user, to_user=from_user):
+            # frienshipinvitation has been sent by the other party too
+            #    accept the initial invitation
+            former_invitation = self.get(from_user=to_user, to_user=from_user)
+            former_invitation.accept()
+        else:
+            self.create(from_user=from_user, to_user=to_user, message=message, status="2")
+        
 
 class FriendshipInvitation(models.Model):
     """
